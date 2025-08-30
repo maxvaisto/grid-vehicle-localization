@@ -1,0 +1,11 @@
+.board {
+  display: grid;
+  /*grid-template-columns: repeat(24, 48px);*/
+  grid-auto-rows: 48px;
+  gap: 2px;
+}
+.tile {
+  display: grid;
+  place-items: center;
+  background: #ccc;
+}
