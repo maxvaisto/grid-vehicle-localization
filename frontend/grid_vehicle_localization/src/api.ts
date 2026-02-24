@@ -44,6 +44,6 @@ export async function postMove(): Promise<void> {
   await client.post('/move');
 }
 
-export async function postRestart(numColors: number): Promise<void> {
-  await client.post('/restart', { num_colors: numColors });
+export async function postRestart(numColors: number, boardSize: number): Promise<void> {
+  await client.post('/restart', { num_colors: numColors, board_size: boardSize });
 }

@@ -12,6 +12,7 @@ calculator = Calculator(board_size=5, sensor_accuracy=0.999, num_colors=4)
 
 class RestartRequest(BaseModel):
     num_colors: int
+    board_size: int
 
 
 @app.get("/vehicle_position")

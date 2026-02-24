@@ -18,6 +18,7 @@ interface AppState {
   probabilityField: number[][];
   vehiclePosition: VehiclePosition;
   numColors: number;
+  boardSize: number;
   loading: boolean;
   error: string | null;
   moving: boolean;
@@ -34,6 +35,7 @@ const EMPTY_STATE: AppState = {
   probabilityField: [],
   vehiclePosition: { x: 0, y: 0 },
   numColors: 4,
+  boardSize: 5,
   loading: true,
   error: null,
   moving: false,
@@ -130,19 +132,20 @@ export default function App() {
     }
   }
 
-  async function handleRestart(numColors: number) {
+  async function handleRestart(numColors: number, boardSize: number) {
     autoPlayingRef.current = false;
     setState((s) => ({
       ...s,
       loading: true,
       numColors,
+      boardSize,
       autoPlaying: false,
       gameOver: false,
       predictedPosition: null,
       predictionCorrect: null,
     }));
     try {
-      await postRestart(numColors);
+      await postRestart(numColors, boardSize);
       const data = await loadAll();
       setState((s) => ({ ...s, ...data, loading: false }));
     } catch (e) {
@@ -166,7 +169,18 @@ export default function App() {
           min={3}
           max={8}
           value={state.numColors}
-          onChange={(e) => handleRestart(Number(e.target.value))}
+          onChange={(e) => handleRestart(Number(e.target.value), state.boardSize)}
+        />
+        <label htmlFor="board-size-slider">
+          Size: <strong>{state.boardSize}&times;{state.boardSize}</strong>
+        </label>
+        <input
+          id="board-size-slider"
+          type="range"
+          min={4}
+          max={16}
+          value={state.boardSize}
+          onChange={(e) => handleRestart(state.numColors, Number(e.target.value))}
         />
         <label htmlFor="certainty-slider">
           Stop at: <strong>{state.certaintyThreshold}%</strong>
@@ -197,7 +211,7 @@ export default function App() {
           </p>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' }}>
             <button onClick={handleContinue}>Continue</button>
-            <button onClick={() => handleRestart(state.numColors)}>New Game</button>
+            <button onClick={() => handleRestart(state.numColors, state.boardSize)}>New Game</button>
           </div>
         </div>
       )}

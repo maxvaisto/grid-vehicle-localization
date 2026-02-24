@@ -28,10 +28,12 @@ class Calculator:
         self._init_vehicle()
 
 
-    def restart(self, num_colors: int | None = None):
+    def restart(self, num_colors: int | None = None, board_size: int | None = None):
         """ Start a new game"""
         if num_colors is not None:
             self.num_colors = num_colors
+        if board_size is not None:
+            self.board_size = board_size
         self._init_game_board(self.board_size)
         self._init_vehicle()
 
