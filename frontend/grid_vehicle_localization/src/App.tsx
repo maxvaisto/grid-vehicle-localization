@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Board from './Board';
 import {
   fetchBoard,
@@ -21,6 +21,7 @@ interface AppState {
   loading: boolean;
   error: string | null;
   moving: boolean;
+  autoPlaying: boolean;
 }
 
 const EMPTY_STATE: AppState = {
@@ -32,6 +33,7 @@ const EMPTY_STATE: AppState = {
   loading: true,
   error: null,
   moving: false,
+  autoPlaying: false,
 };
 
 async function loadAll() {
@@ -45,11 +47,13 @@ async function loadAll() {
 
 export default function App() {
   const [state, setState] = useState<AppState>(EMPTY_STATE);
+  const autoPlayingRef = useRef(false);
 
   useEffect(() => {
     loadAll()
       .then((data) => setState((s) => ({ ...s, ...data, loading: false })))
       .catch((e) => setState((s) => ({ ...s, loading: false, error: String(e) })));
+    return () => { autoPlayingRef.current = false; };
   }, []);
 
   async function handleMove() {
@@ -66,8 +70,25 @@ export default function App() {
     }
   }
 
+  function handleToggleAutoPlay() {
+    if (autoPlayingRef.current) {
+      autoPlayingRef.current = false;
+      setState((s) => ({ ...s, autoPlaying: false }));
+    } else {
+      autoPlayingRef.current = true;
+      setState((s) => ({ ...s, autoPlaying: true }));
+      async function step() {
+        if (!autoPlayingRef.current) return;
+        await handleMove();
+        if (autoPlayingRef.current) setTimeout(step, 200);
+      }
+      step();
+    }
+  }
+
   async function handleRestart(numColors: number) {
-    setState((s) => ({ ...s, loading: true, numColors }));
+    autoPlayingRef.current = false;
+    setState((s) => ({ ...s, loading: true, numColors, autoPlaying: false }));
     try {
       await postRestart(numColors);
       const data = await loadAll();
@@ -102,9 +123,12 @@ export default function App() {
         probabilityField={state.probabilityField}
         vehiclePosition={state.vehiclePosition}
       />
-      <div style={{ textAlign: 'center', marginTop: '12px' }}>
-        <button onClick={handleMove} disabled={state.moving}>
+      <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <button onClick={handleMove} disabled={state.moving || state.autoPlaying}>
           {state.moving ? 'Moving...' : 'Move'}
+        </button>
+        <button onClick={handleToggleAutoPlay} disabled={state.moving && !state.autoPlaying}>
+          {state.autoPlaying ? 'Stop' : 'Auto-play'}
         </button>
       </div>
     </>
