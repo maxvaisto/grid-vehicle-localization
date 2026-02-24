@@ -1,33 +1,29 @@
-import React from "react";
-import type { AllowedColors } from "./Tile";
-import "./styles.css"
-import { Tile } from "./Tile";
+import './styles.css';
+import { Tile } from './Tile';
+import type { ColorId, Colormap, VehiclePosition } from './api';
 
-const rows = 7;
-const cols = 20;
-
-const allowedColors: AllowedColors[] = ["RED", "YELLOW", "GREEN", "BLUE"];
-
-function getRandomColor(): AllowedColors {
-    const index = Math.floor(Math.random() * allowedColors.length);
-    return allowedColors[index];
+interface BoardProps {
+  board: ColorId[][];
+  colormap: Colormap;
+  probabilityField: number[][];
+  vehiclePosition: VehiclePosition;
 }
 
+export default function Board({ board, colormap, probabilityField, vehiclePosition }: BoardProps) {
+  const cols = board[0]?.length ?? 5;
 
-
-export default function Board(){
-    const allowed_colors: AllowedColors[] = [];
-
-    for (let i = 0; i< rows*cols; i++){
-
-        allowed_colors.push( getRandomColor())
-    }
-
-    return(
-        <div className={"board"} style={{gridTemplateColumns: `repeat(${cols}, 48px)`}}>
-            {allowed_colors.map((color, idx) => (
-                <Tile color={color} key={idx}/>
-            ))}
-        </div>
-    );
+  return (
+    <div className="board" style={{ gridTemplateColumns: `repeat(${cols}, 80px)` }}>
+      {board.map((row, rowIdx) =>
+        row.map((colorId, colIdx) => (
+          <Tile
+            key={`${rowIdx}-${colIdx}`}
+            colorInfo={colormap[colorId]}
+            probability={probabilityField[rowIdx]?.[colIdx] ?? 0}
+            isVehicle={vehiclePosition.x === rowIdx && vehiclePosition.y === colIdx}
+          />
+        ))
+      )}
+    </div>
+  );
 }
