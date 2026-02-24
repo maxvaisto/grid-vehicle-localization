@@ -22,6 +22,10 @@ interface AppState {
   error: string | null;
   moving: boolean;
   autoPlaying: boolean;
+  certaintyThreshold: number;
+  gameOver: boolean;
+  predictedPosition: VehiclePosition | null;
+  predictionCorrect: boolean | null;
 }
 
 const EMPTY_STATE: AppState = {
@@ -34,6 +38,10 @@ const EMPTY_STATE: AppState = {
   error: null,
   moving: false,
   autoPlaying: false,
+  certaintyThreshold: 90,
+  gameOver: false,
+  predictedPosition: null,
+  predictionCorrect: null,
 };
 
 async function loadAll() {
@@ -48,6 +56,7 @@ async function loadAll() {
 export default function App() {
   const [state, setState] = useState<AppState>(EMPTY_STATE);
   const autoPlayingRef = useRef(false);
+  const certaintyThresholdRef = useRef(90);
 
   useEffect(() => {
     loadAll()
@@ -64,10 +73,45 @@ export default function App() {
         fetchProbabilityField(),
         fetchVehiclePosition(),
       ]);
-      setState((s) => ({ ...s, probabilityField, vehiclePosition, moving: false }));
+
+      // Find tile with highest probability
+      let maxProb = 0;
+      let maxRow = 0, maxCol = 0;
+      for (let r = 0; r < probabilityField.length; r++) {
+        for (let c = 0; c < (probabilityField[r]?.length ?? 0); c++) {
+          if (probabilityField[r][c] > maxProb) {
+            maxProb = probabilityField[r][c];
+            maxRow = r;
+            maxCol = c;
+          }
+        }
+      }
+
+      const threshold = certaintyThresholdRef.current / 100;
+      if (maxProb >= threshold) {
+        const predictedPosition = { x: maxRow, y: maxCol };
+        const predictionCorrect = vehiclePosition.x === maxRow && vehiclePosition.y === maxCol;
+        autoPlayingRef.current = false;
+        setState((s) => ({
+          ...s,
+          probabilityField,
+          vehiclePosition,
+          moving: false,
+          autoPlaying: false,
+          gameOver: true,
+          predictedPosition,
+          predictionCorrect,
+        }));
+      } else {
+        setState((s) => ({ ...s, probabilityField, vehiclePosition, moving: false }));
+      }
     } catch (e) {
       setState((s) => ({ ...s, moving: false, error: String(e) }));
     }
+  }
+
+  function handleContinue() {
+    setState((s) => ({ ...s, gameOver: false, predictedPosition: null, predictionCorrect: null }));
   }
 
   function handleToggleAutoPlay() {
@@ -88,7 +132,15 @@ export default function App() {
 
   async function handleRestart(numColors: number) {
     autoPlayingRef.current = false;
-    setState((s) => ({ ...s, loading: true, numColors, autoPlaying: false }));
+    setState((s) => ({
+      ...s,
+      loading: true,
+      numColors,
+      autoPlaying: false,
+      gameOver: false,
+      predictedPosition: null,
+      predictionCorrect: null,
+    }));
     try {
       await postRestart(numColors);
       const data = await loadAll();
@@ -111,23 +163,56 @@ export default function App() {
         <input
           id="num-colors-slider"
           type="range"
-          min={4}
+          min={3}
           max={8}
           value={state.numColors}
           onChange={(e) => handleRestart(Number(e.target.value))}
         />
+        <label htmlFor="certainty-slider">
+          Stop at: <strong>{state.certaintyThreshold}%</strong>
+        </label>
+        <input
+          id="certainty-slider"
+          type="range"
+          min={50}
+          max={99}
+          value={state.certaintyThreshold}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            certaintyThresholdRef.current = val;
+            setState((s) => ({ ...s, certaintyThreshold: val }));
+          }}
+        />
       </div>
+      {state.gameOver && state.predictedPosition !== null && (
+        <div className="game-over-banner">
+          <h2>Algorithm locked on!</h2>
+          <p>
+            Predicted position: row {state.predictedPosition.x + 1}, col {state.predictedPosition.y + 1}
+          </p>
+          <p className={state.predictionCorrect ? 'result--correct' : 'result--wrong'}>
+            {state.predictionCorrect
+              ? '\u2713 Correct! The cart is exactly where predicted.'
+              : `\u2717 Wrong! The cart was at row ${state.vehiclePosition.x + 1}, col ${state.vehiclePosition.y + 1}.`}
+          </p>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' }}>
+            <button onClick={handleContinue}>Continue</button>
+            <button onClick={() => handleRestart(state.numColors)}>New Game</button>
+          </div>
+        </div>
+      )}
       <Board
         board={state.board}
         colormap={state.colormap}
         probabilityField={state.probabilityField}
         vehiclePosition={state.vehiclePosition}
+        predictedPosition={state.predictedPosition}
       />
       <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-        <button onClick={handleMove} disabled={state.moving || state.autoPlaying}>
+        <button onClick={handleMove} disabled={state.moving || state.autoPlaying || state.gameOver}>
           {state.moving ? 'Moving...' : 'Move'}
         </button>
-        <button onClick={handleToggleAutoPlay} disabled={state.moving && !state.autoPlaying}>
+        <button onClick={handleToggleAutoPlay} disabled={(state.moving && !state.autoPlaying) || state.gameOver}>
           {state.autoPlaying ? 'Stop' : 'Auto-play'}
         </button>
       </div>
