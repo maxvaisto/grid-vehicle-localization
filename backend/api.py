@@ -36,9 +36,11 @@ def move():
 
 @app.post("/restart")
 def restart(request: RestartRequest):
-    if not (4 <= request.num_colors <= 8):
-        raise HTTPException(status_code=422, detail="num_colors must be between 4 and 8")
-    calculator.restart(request.num_colors)
+    if not (3 <= request.num_colors <= 8):
+        raise HTTPException(status_code=422, detail="num_colors must be between 3 and 8")
+    if not (4 <= request.board_size <= 16):
+        raise HTTPException(status_code=422, detail="board_size must be between 4 and 16")
+    calculator.restart(num_colors=request.num_colors, board_size=request.board_size)
 
 @app.get("/get_colormap")
 def get_colormap():
