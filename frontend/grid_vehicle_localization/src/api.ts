@@ -2,13 +2,13 @@ import axios from 'axios';
 
 const client = axios.create({ baseURL: '/api' });
 
-export type ColorId = 0 | 1 | 2 | 3;
+export type ColorId = number;
 
 export interface ColorInfo {
   RGB: [number, number, number];
 }
 
-export type Colormap = Record<ColorId, ColorInfo>;
+export type Colormap = Record<number, ColorInfo>;
 
 export interface VehiclePosition {
   x: number;
@@ -23,12 +23,11 @@ export async function fetchBoard(): Promise<ColorId[][]> {
 export async function fetchColormap(): Promise<Colormap> {
   const res = await client.get<{ colormap: Record<string, ColorInfo> }>('/get_colormap');
   const raw = res.data.colormap;
-  return {
-    0: raw['0'],
-    1: raw['1'],
-    2: raw['2'],
-    3: raw['3'],
-  } as Colormap;
+  const result: Colormap = {};
+  for (const key of Object.keys(raw)) {
+    result[Number(key)] = raw[key];
+  }
+  return result;
 }
 
 export async function fetchProbabilityField(): Promise<number[][]> {
@@ -43,4 +42,8 @@ export async function fetchVehiclePosition(): Promise<VehiclePosition> {
 
 export async function postMove(): Promise<void> {
   await client.post('/move');
+}
+
+export async function postRestart(numColors: number): Promise<void> {
+  await client.post('/restart', { num_colors: numColors });
 }

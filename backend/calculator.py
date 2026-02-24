@@ -9,29 +9,36 @@ class Colors(Enum):
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
     YELLOW = (255, 255, 0)
+    ORANGE = (255, 128, 0)
+    PURPLE = (128, 0, 255)
+    CYAN = (0, 255, 255)
+    MAGENTA = (255, 0, 255)
 
 
 
 class Calculator:
 
-    def __init__(self, board_size: int, sensor_accuracy: float):
+    def __init__(self, board_size: int, sensor_accuracy: float, num_colors: int = 4):
         self.board_size = board_size
         self.sensor_probability = sensor_accuracy
+        self.num_colors = num_colors
 
         # Create board and initialize vehicle
         self._init_game_board(board_size)
         self._init_vehicle()
 
 
-    def restart(self):
+    def restart(self, num_colors: int | None = None):
         """ Start a new game"""
+        if num_colors is not None:
+            self.num_colors = num_colors
         self._init_game_board(self.board_size)
         self._init_vehicle()
 
 
     def _init_game_board(self, board_size):
         """ Re intialize the board """
-        self.game_board = np.random.randint(low=0, high=len(Colors._member_map_), size=(board_size, board_size), dtype=np.uint8)
+        self.game_board = np.random.randint(low=0, high=self.num_colors, size=(board_size, board_size), dtype=np.uint8)
         self.prob_field = np.full(shape=(board_size, board_size), fill_value=1 / (board_size * board_size), dtype=np.float64)
 
 
@@ -61,7 +68,7 @@ class Calculator:
 
         ## Measurement model
         # Likelihood of seeing the observed color at each cell
-        p_hit = self.sensor_probability + (1 - self.sensor_probability) * (1.0 / len(Colors))
+        p_hit = self.sensor_probability + (1 - self.sensor_probability) * (1.0 / self.num_colors)
         p_miss = 1.0 - p_hit
         likelihood = np.where(self.game_board == observed_color, p_hit, p_miss)
 
@@ -100,7 +107,7 @@ class Calculator:
             self.vehicle_sensor_color = self.game_board[self.vehicle_position[0], self.vehicle_position[1]]
         else:
             print("Random color!!")
-            self.vehicle_sensor_color = np.random.randint(len(Colors._member_map_))
+            self.vehicle_sensor_color = np.random.randint(self.num_colors)
 
     def get_vehicle_sensor_color(self) -> np.uint8:
         return self.vehicle_sensor_color
